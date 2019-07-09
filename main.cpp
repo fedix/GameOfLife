@@ -67,7 +67,7 @@ public:
     void InitBlinker(unsigned int x, unsigned int y);
 
     void InitGlider(unsigned int x, unsigned int y);
-    
+
     unsigned int GetNeighbours(unsigned int x, unsigned int y);
 
     void NextGen();
