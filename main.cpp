@@ -1,7 +1,8 @@
 #include <SDL2/SDL.h>
-#include <memory>
 #include <unistd.h>
 #include <vector>
+#include <random>
+#include <algorithm>
 
 using namespace std;
 
@@ -11,7 +12,7 @@ SDL_Surface *surface = nullptr;
 // Width and height of your cell in pixels
 unsigned int CELL_SIZE = 2;
 
-unsigned int CELLMAP_WIDTH = 480,
+unsigned int CELLMAP_WIDTH = 640,
         CELLMAP_HEIGHT = 480;
 
 unsigned int SCREEN_WIDTH = CELLMAP_WIDTH * CELL_SIZE,
@@ -23,9 +24,9 @@ class Cell final {
 public:
     Cell();
 
-    ~Cell();
+    ~Cell() = default;
 
-    bool GetState();
+    bool GetState() const noexcept;
 
     void SetOn();
 
@@ -37,9 +38,7 @@ private:
 
 Cell::Cell() : state(false) {}
 
-Cell::~Cell() = default;
-
-bool Cell::GetState() {
+bool Cell::GetState() const noexcept{
     return state;
 }
 
@@ -55,19 +54,19 @@ class CellMap final {
 public:
     CellMap(unsigned int width, unsigned int height);
 
-    ~CellMap();
+    ~CellMap() = default;
 
     void SetCell(unsigned int x, unsigned int y);
 
     void ClearCell(unsigned int x, unsigned int y);
 
-    void Init();
+    void Init(float percentage);
 
     void InitBlinker(unsigned int x, unsigned int y);
 
     void InitGlider(unsigned int x, unsigned int y);
 
-    unsigned int GetNeighbours(unsigned int x, unsigned int y);
+    unsigned int GetNeighbours(unsigned int x, unsigned int y) const noexcept;
 
     void NextGen();
 
@@ -83,16 +82,19 @@ CellMap::CellMap(unsigned int width, unsigned int height) : w(width), h(height) 
     cells.resize(w, vector<Cell>(h));
 }
 
-CellMap::~CellMap() = default;
-
-void CellMap::Init() {
+void CellMap::Init(float percentage) {
     auto seed = (unsigned) time(nullptr);
     srand(seed);
+    random_device rd;
+    // mersenne twister engine
+    mt19937 mt(rd());
+    uniform_int_distribution<unsigned int> dist(0, max(w - 1, h - 1));
+
 
     unsigned int x, y;
-    for (int i = 0; i < length * 0.7; i++) {
-        x = rand() % (w - 1);
-        y = rand() % (h - 1);
+    for (int i = 0; i < length * percentage; i++) {
+        x = dist(mt) % (w - 1);
+        y = dist(mt) % (h - 1);
 
         if (!cells[x][y].GetState()) {
             SetCell(x, y);
@@ -117,7 +119,7 @@ void CellMap::InitGlider(unsigned int x, unsigned int y) {
 }
 
 
-unsigned int CellMap::GetNeighbours(unsigned int x, unsigned int y) {
+unsigned int CellMap::GetNeighbours(unsigned int x, unsigned int y) const noexcept {
     int n_neighbours = 0,
             neighbourX, neighbourY;
     for (int i = -1; i <= 1; i++) {
@@ -195,9 +197,10 @@ int main(int argc, char *argv[]) {
     // Event Handler
     SDL_Event e;
 
-    CellMap map = CellMap(CELLMAP_WIDTH, CELLMAP_HEIGHT);
-    map.Init();
+    CellMap map(CELLMAP_WIDTH, CELLMAP_HEIGHT);
+    map.Init(0.5);
 
+    atexit(SDL_Quit);
 
     // Rendering loop
     bool quit = false;
